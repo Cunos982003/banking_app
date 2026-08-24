@@ -1,0 +1,42 @@
+services:
+  core-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: banking_db
+      POSTGRES_USER: bank_user
+      POSTGRES_PASSWORD: bank_pass
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bank_user -d banking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - banking-network
+
+  account-service:
+    build:
+      context: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://core-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: bank_user
+      SPRING_DATASOURCE_PASSWORD: bank_pass
+      PASSWORD: bank_pass
+      DB_HOST: core-db
+      DB_PORT: 5432
+    ports:
+      - "8080:8080"
+    depends_on:
+      core-db:
+        condition: service_healthy
+    networks:
+      - banking-network
+
+networks:
+  banking-network:
+    driver: bridge
+
+volumes:
+  pg-data:
+    driver: local
